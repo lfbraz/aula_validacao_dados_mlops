@@ -31,15 +31,26 @@ if deploy_dir not in sys.path:
 # COMMAND ----------
 
 dbutils.widgets.dropdown("env", "None", ["None", "dev", "staging", "prod"], "Environment Name")
+dbutils.widgets.text("model_name", "dev.validacao_dados_aula_8.validacao_dados_aula_8-model", "Nome completo do modelo (UC)")
 
 # COMMAND ----------
 
 from deploy import deploy
+from mlflow.tracking import MlflowClient
 
 model_uri = dbutils.jobs.taskValues.get("Train", "model_uri", debugValue="")
 env = dbutils.widgets.get("env")
 assert env != "None", "env notebook parameter must be specified"
-assert model_uri != "", "model_uri notebook parameter must be specified"
+
+if not model_uri:
+    model_name = dbutils.widgets.get("model_name")
+    client = MlflowClient(registry_uri="databricks-uc")
+    versions = client.search_model_versions(f"name='{model_name}'")
+    assert versions, f"Nenhuma versão encontrada para o modelo '{model_name}'"
+    latest_version = str(max(int(mv.version) for mv in versions))
+    model_uri = f"models:/{model_name}/{latest_version}"
+    print(f"ℹ️  model_uri não recebido via task values — usando última versão: {model_uri}")
+
 deploy(model_uri, env)
 
 # COMMAND ----------
