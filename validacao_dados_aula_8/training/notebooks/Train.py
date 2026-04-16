@@ -25,10 +25,6 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -r ../../requirements.txt
-
-# COMMAND ----------
-
 # DBTITLE 1, Parâmetros do notebook
 dbutils.widgets.dropdown("env", "staging", ["staging", "prod"], "Environment Name")
 env = dbutils.widgets.get("env")
