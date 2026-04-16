@@ -250,19 +250,35 @@ with mlflow.start_run(
             targets=targets,
             model_type=model_type,
             evaluators=evaluators,
-            validation_thresholds=validation_thresholds,
-            custom_metrics=custom_metrics,
+            extra_metrics=custom_metrics,
             baseline_model=None if not enable_baseline_comparison else baseline_model_uri,
             evaluator_config=evaluator_config,
         )
 
+        # Verificar thresholds manualmente
+        violations = []
+        for metric_name, t in validation_thresholds.items():
+            actual = eval_result.metrics.get(metric_name)
+            if actual is None:
+                continue
+            passed = actual >= t.threshold if t.greater_is_better else actual <= t.threshold
+            op = ">=" if t.greater_is_better else "<="
+            status = "✅" if passed else "❌"
+            print(f"   {status} {metric_name:<35} = {actual:.4f}  ({op} {t.threshold})")
+            if not passed:
+                violations.append(f"{metric_name}: {actual:.4f} (esperado {op} {t.threshold})")
+
+        if violations:
+            raise Exception("Thresholds violados:\n" + "\n".join(f"  - {v}" for v in violations))
+
         # Log das métricas como artefato para fácil visualização
+        baseline_metrics = getattr(eval_result, "baseline_model_metrics", {}) or {}
         metrics_file = os.path.join(tmp_dir, "metrics_comparison.txt")
         with open(metrics_file, "w") as f:
             f.write(f"{'Métrica':<30}  {'Candidato':<20}  {'Baseline'}\n")
             f.write("-" * 70 + "\n")
             for metric_name, candidate_val in eval_result.metrics.items():
-                baseline_val = eval_result.baseline_model_metrics.get(metric_name, "N/A")
+                baseline_val = baseline_metrics.get(metric_name, "N/A")
                 if isinstance(baseline_val, float):
                     mlflow.log_metric(f"baseline_{metric_name}", baseline_val)
                 f.write(f"{metric_name:<30}  {str(candidate_val):<20}  {str(baseline_val)}\n")
@@ -275,13 +291,6 @@ with mlflow.start_run(
         print(f"   Atribuindo alias 'challenger' à versão {model_version}...")
         client.set_registered_model_alias(model_name, "challenger", model_version)
         print(f"   Alias 'challenger' atribuído com sucesso.")
-
-        # Exibir resumo das métricas
-        print("\n📊 Métricas de validação:")
-        for k, v in sorted(eval_result.metrics.items()):
-            in_threshold = k in validation_thresholds
-            marker = "→ avaliado" if in_threshold else ""
-            print(f"   {k:<35} = {v:.4f}  {marker}")
 
     except Exception as err:
         log_to_model_description(run, False)
