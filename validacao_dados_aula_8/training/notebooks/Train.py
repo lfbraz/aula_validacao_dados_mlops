@@ -25,19 +25,6 @@
 
 # COMMAND ----------
 
-import os
-notebook_path = '/Workspace/' + os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
-
-# COMMAND ----------
-
-# MAGIC %pip install -r $notebook_path/../../requirements.txt
-
-# COMMAND ----------
-
-dbutils.library.restartPython()
-
-# COMMAND ----------
-
 # DBTITLE 1, Parâmetros do notebook
 dbutils.widgets.dropdown("env", "staging", ["staging", "prod"], "Environment Name")
 env = dbutils.widgets.get("env")
