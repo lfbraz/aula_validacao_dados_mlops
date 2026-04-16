@@ -200,6 +200,8 @@ def get_run_link(run_info):
 
 def get_training_run(model_name, model_version):
     version = client.get_model_version(model_name, model_version)
+    if not version.run_id:
+        return None
     return mlflow.get_run(run_id=version.run_id)
 
 def generate_run_name(training_run):
