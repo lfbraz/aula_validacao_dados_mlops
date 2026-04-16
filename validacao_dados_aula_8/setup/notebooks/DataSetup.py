@@ -47,15 +47,30 @@ print(f"Scoring  : {n_scoring} registros")
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## 0. Limpeza (Drop) dos Objetos Existentes
+# MAGIC
+# MAGIC Remove o schema e todas as tabelas associadas para garantir uma criação limpa do zero.
+
+# COMMAND ----------
+
+# DBTITLE 1, Limpar objetos existentes
+print(f"🧹 Iniciando limpeza de '{catalog_name}.{schema_name}'...")
+spark.sql(f"DROP SCHEMA IF EXISTS {catalog_name}.{schema_name} CASCADE")
+print(f"✅ Schema '{catalog_name}.{schema_name}' removido (se existia).")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## 1. Configuração do Catalog e Schema
 # MAGIC
 # MAGIC Garantimos que o catalog e o schema existem antes de criar as tabelas.
 
 # COMMAND ----------
 
-# DBTITLE 1, Criar schema (se não existir)
+# DBTITLE 1, Criar catalog e schema (se não existirem)
+spark.sql(f"CREATE CATALOG IF NOT EXISTS {catalog_name}")
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog_name}.{schema_name}")
-print(f"✅ Schema '{catalog_name}.{schema_name}' pronto.")
+print(f"✅ Catalog '{catalog_name}' e schema '{catalog_name}.{schema_name}' prontos.")
 
 # COMMAND ----------
 
