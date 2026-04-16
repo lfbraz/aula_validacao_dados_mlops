@@ -293,28 +293,4 @@ plt.show()
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## 7. Conclusões da EDA
-# MAGIC
-# MAGIC Com base na análise exploratória, podemos concluir:
-# MAGIC
-# MAGIC **Qualidade dos dados:**
-# MAGIC - ✅ Sem valores nulos
-# MAGIC - ✅ Sem duplicatas
-# MAGIC - ✅ Todos os valores estão dentro dos intervalos esperados
-# MAGIC
-# MAGIC **Features mais relevantes para o modelo:**
-# MAGIC - 🥇 `trip_distance` — principal driver de preço (correlação ~0.85)
-# MAGIC - 🥈 `num_passengers` — impacto moderado
-# MAGIC - 🥉 `hour_of_day` e `day_of_week` — efeito nos horários de pico e finais de semana
-# MAGIC - `weather_score` — mau tempo aumenta o valor da corrida
-# MAGIC - `pickup_zone` / `dropoff_zone` — zonas centrais têm tarifa ligeiramente maior
-# MAGIC
-# MAGIC **Próximos passos:**
-# MAGIC 1. Treinar um modelo LightGBM usando o notebook `Train.py`
-# MAGIC 2. Validar o modelo com o `ModelValidation.py`
-# MAGIC 3. Fazer deploy e inferência em batch com `ModelDeployment.py` e `BatchInference.py`
-
-# COMMAND ----------
-
 print("✅ EDA concluída! Acesse o notebook Train.py para iniciar o treinamento do modelo.")
