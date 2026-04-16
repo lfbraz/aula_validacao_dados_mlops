@@ -133,7 +133,14 @@ model_version = dbutils.jobs.taskValues.get("Train", "model_version", debugValue
 if model_uri == "":
     model_name    = dbutils.widgets.get("model_name")
     model_version = dbutils.widgets.get("model_version")
-    model_uri     = f"models:/{model_name}/{model_version}"
+
+    if not model_version:
+        versions = client.search_model_versions(f"name='{model_name}'")
+        assert versions, f"Nenhuma versão encontrada para o modelo '{model_name}'"
+        model_version = str(max(int(mv.version) for mv in versions))
+        print(f"ℹ️  model_version não informado — usando última versão: {model_version}")
+
+    model_uri = f"models:/{model_name}/{model_version}"
 
 baseline_model_uri = f"models:/{model_name}@champion"
 
