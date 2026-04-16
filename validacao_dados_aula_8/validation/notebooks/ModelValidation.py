@@ -152,7 +152,23 @@ model_type                 = dbutils.widgets.get("model_type")
 targets                    = dbutils.widgets.get("targets")
 
 # Carregar dados de validação
+from pyspark.sql import functions as F
+
 data = spark.sql(validation_input)
+
+data = (
+    data
+    .withColumn("is_rush_hour",
+        F.when(((F.col("hour_of_day") >= 7) & (F.col("hour_of_day") <= 9)) |
+               ((F.col("hour_of_day") >= 17) & (F.col("hour_of_day") <= 19)), 1).otherwise(0))
+    .withColumn("is_weekend",
+        F.when(F.col("day_of_week") >= 5, 1).otherwise(0))
+    .withColumn("is_bad_weather",
+        F.when(F.col("weather_score") < 3.0, 1).otherwise(0))
+    .withColumn("distance_x_passengers",
+        F.col("trip_distance") * F.col("num_passengers"))
+)
+
 print(f"📊 Dados de validação carregados: {data.count():,} registros")
 display(data.limit(5))
 
