@@ -251,7 +251,6 @@ with mlflow.start_run(
             model_type=model_type,
             evaluators=evaluators,
             extra_metrics=custom_metrics,
-            baseline_model=None if not enable_baseline_comparison else baseline_model_uri,
             evaluator_config=evaluator_config,
         )
 
