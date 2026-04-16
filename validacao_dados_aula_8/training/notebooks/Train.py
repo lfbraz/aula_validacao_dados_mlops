@@ -25,18 +25,12 @@
 
 # COMMAND ----------
 
-# MAGIC %load_ext autoreload
-# MAGIC %autoreload 2
-
-# COMMAND ----------
-
 import os
 notebook_path = '/Workspace/' + os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
-%cd $notebook_path
 
 # COMMAND ----------
 
-# MAGIC %pip install -r ../../requirements.txt
+# MAGIC %pip install -r $notebook_path/../../requirements.txt
 
 # COMMAND ----------
 

@@ -1,12 +1,3 @@
-new_cluster: &new_cluster
-  new_cluster:
-    num_workers: 3
-    spark_version: 15.3.x-cpu-ml-scala2.12
-    node_type_id: i3.xlarge
-    data_security_mode: "SINGLE_USER"
-    custom_tags:
-      clusterSource: mlops-stacks_0.4
-
 common_permissions: &permissions
   permissions:
     - level: CAN_VIEW
@@ -16,9 +7,13 @@ resources:
   jobs:
     batch_inference_job:
       name: ${bundle.target}-validacao_dados_aula_8-batch-inference-job
+      environments:
+        - environment_key: default
+          spec:
+            client: "1"
       tasks:
         - task_key: batch_inference_job
-          <<: *new_cluster
+          environment_key: default
           notebook_task:
             notebook_path: ../deployment/batch_inference/notebooks/BatchInference.py
             base_parameters:
