@@ -11,60 +11,67 @@
 #  * num_violation_windows (required)  - Number of windows that need to violate the threshold
 ##################################################################################
 
-# List of input args needed to run the notebook as a job.
-# Provide them via DB widgets or notebook arguments.
-#
-# Name of the table that is currently being monitored
+# COMMAND ----------
+
+import os
+spark.range(1).collect()
+notebook_path = '/Workspace/' + os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
+
+# COMMAND ----------
+
+# MAGIC %pip install -r $notebook_path/../../../requirements.txt
+
+# COMMAND ----------
+
+import os, sys
+notebook_path = '/Workspace/' + os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
+monitoring_dir = os.path.dirname(notebook_path)  # monitoring/
+if monitoring_dir not in sys.path:
+    sys.path.insert(0, monitoring_dir)
+
+# COMMAND ----------
+
 dbutils.widgets.text(
     "table_name_under_monitor", "dev.validacao_dados_aula_8.predictions", label="Full (three-Level) table name"
 )
-# Metric to be used for threshold violation check
 dbutils.widgets.text(
     "metric_to_monitor", "root_mean_squared_error", label="Metric to be monitored for threshold violation"
 )
-
-# Threshold value to be checked
 dbutils.widgets.text(
     "metric_violation_threshold", "100", label="Threshold value for metric violation"
 )
-
-# Threshold value to be checked
 dbutils.widgets.text(
     "num_evaluation_windows", "5", label="Number of windows to check for violation"
 )
-
-# Threshold value to be checked
 dbutils.widgets.text(
     "num_violation_windows", "2", label="Number of windows that need to violate the threshold"
 )
 
 # COMMAND ----------
 
-import os
-import sys
-notebook_path =  '/Workspace/' + os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
-%cd $notebook_path
-%cd ..
-sys.path.append("../..")
-
-# COMMAND ----------
-
 from metric_violation_check_query import sql_query
 
-table_name_under_monitor = dbutils.widgets.get("table_name_under_monitor")
-metric_to_monitor = dbutils.widgets.get("metric_to_monitor")
+table_name_under_monitor   = dbutils.widgets.get("table_name_under_monitor")
+metric_to_monitor          = dbutils.widgets.get("metric_to_monitor")
 metric_violation_threshold = dbutils.widgets.get("metric_violation_threshold")
-num_evaluation_windows = dbutils.widgets.get("num_evaluation_windows")
-num_violation_windows = dbutils.widgets.get("num_violation_windows")
+num_evaluation_windows     = dbutils.widgets.get("num_evaluation_windows")
+num_violation_windows      = dbutils.widgets.get("num_violation_windows")
 
-formatted_sql_query = sql_query.format(
-    table_name_under_monitor=table_name_under_monitor,
-    metric_to_monitor=metric_to_monitor,
-    metric_violation_threshold=metric_violation_threshold,
-    num_evaluation_windows=num_evaluation_windows,
-    num_violation_windows=num_violation_windows)
-is_metric_violated = bool(spark.sql(formatted_sql_query).toPandas()["query_result"][0])
+profile_metrics_table = f"{table_name_under_monitor}_profile_metrics"
 
+if not spark.catalog.tableExists(profile_metrics_table):
+    print(f"⚠️  Tabela '{profile_metrics_table}' ainda não existe — o monitor ainda não executou.")
+    print("   Definindo is_metric_violated=False e encerrando sem erro.")
+    is_metric_violated = False
+else:
+    formatted_sql_query = sql_query.format(
+        table_name_under_monitor=table_name_under_monitor,
+        metric_to_monitor=metric_to_monitor,
+        metric_violation_threshold=metric_violation_threshold,
+        num_evaluation_windows=num_evaluation_windows,
+        num_violation_windows=num_violation_windows,
+    )
+    is_metric_violated = bool(spark.sql(formatted_sql_query).toPandas()["query_result"][0])
+
+print(f"is_metric_violated: {is_metric_violated}")
 dbutils.jobs.taskValues.set("is_metric_violated", is_metric_violated)
-
-
