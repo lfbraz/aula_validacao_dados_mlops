@@ -10,7 +10,7 @@ on:
         default: validacao_dados_aula_8
 
 env:
-  DATABRICKS_HOST: https://dbc-a267a1ed-0d96.cloud.databricks.com
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
   DATABRICKS_TOKEN: ${{ secrets.STAGING_WORKSPACE_TOKEN }}
 
 jobs:
