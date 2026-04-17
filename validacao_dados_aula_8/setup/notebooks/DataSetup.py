@@ -67,10 +67,14 @@ print(f"✅ Schema '{catalog_name}.{schema_name}' removido (se existia).")
 
 # COMMAND ----------
 
-# DBTITLE 1, Criar catalog e schema (se não existirem)
-spark.sql(f"CREATE CATALOG IF NOT EXISTS {catalog_name}")
+# DBTITLE 1, Criar todos os catalogs dos targets do bundle (se não existirem)
+for cat in ["dev", "staging", "prod", "test"]:
+    spark.sql(f"CREATE CATALOG IF NOT EXISTS {cat}")
+    print(f"✅ Catalog '{cat}' pronto.")
+
+# DBTITLE 1, Criar schema no catalog selecionado (se não existir)
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog_name}.{schema_name}")
-print(f"✅ Catalog '{catalog_name}' e schema '{catalog_name}.{schema_name}' prontos.")
+print(f"✅ Schema '{catalog_name}.{schema_name}' pronto.")
 
 # COMMAND ----------
 
