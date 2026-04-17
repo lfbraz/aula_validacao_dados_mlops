@@ -12,6 +12,7 @@ defaults:
 
 env:
   DATABRICKS_TOKEN: ${{ secrets.STAGING_WORKSPACE_TOKEN }}
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
 
 concurrency: validacao_dados_aula_8-training-integration-test-staging
 
