@@ -7,7 +7,7 @@ name: Bundle Deployment for validacao_dados_aula_8 Prod
 on:
   push:
     branches:
-      - 'release'
+      - 'main'
   workflow_dispatch:
 
 defaults:
