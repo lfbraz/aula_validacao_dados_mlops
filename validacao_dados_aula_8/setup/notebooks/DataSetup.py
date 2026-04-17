@@ -24,6 +24,11 @@
 
 # COMMAND ----------
 
+# Serverless: spark must be initialized in the first cell
+spark.range(1).collect()
+
+# COMMAND ----------
+
 # DBTITLE 1, Parâmetros do notebook
 dbutils.widgets.text("catalog_name", "dev", "Catalog Name")
 dbutils.widgets.text("schema_name", "validacao_dados_aula_8", "Schema Name")
@@ -55,8 +60,12 @@ print(f"Scoring  : {n_scoring} registros")
 
 # DBTITLE 1, Limpar objetos existentes
 print(f"🧹 Iniciando limpeza de '{catalog_name}.{schema_name}'...")
-spark.sql(f"DROP SCHEMA IF EXISTS {catalog_name}.{schema_name} CASCADE")
-print(f"✅ Schema '{catalog_name}.{schema_name}' removido (se existia).")
+catalog_exists = len(spark.sql(f"SHOW CATALOGS LIKE '{catalog_name}'").collect()) > 0
+if catalog_exists:
+    spark.sql(f"DROP SCHEMA IF EXISTS {catalog_name}.{schema_name} CASCADE")
+    print(f"✅ Schema '{catalog_name}.{schema_name}' removido (se existia).")
+else:
+    print(f"ℹ️ Catalog '{catalog_name}' não existe ainda, nada a limpar.")
 
 # COMMAND ----------
 
