@@ -24,6 +24,11 @@
 
 # COMMAND ----------
 
+# Serverless: spark must be initialized in the first cell
+spark.range(1).collect()
+
+# COMMAND ----------
+
 # DBTITLE 1, Parâmetros do notebook
 dbutils.widgets.text("catalog_name", "dev", "Catalog Name")
 dbutils.widgets.text("schema_name", "validacao_dados_aula_8", "Schema Name")
@@ -55,8 +60,12 @@ print(f"Scoring  : {n_scoring} registros")
 
 # DBTITLE 1, Limpar objetos existentes
 print(f"🧹 Iniciando limpeza de '{catalog_name}.{schema_name}'...")
-spark.sql(f"DROP SCHEMA IF EXISTS {catalog_name}.{schema_name} CASCADE")
-print(f"✅ Schema '{catalog_name}.{schema_name}' removido (se existia).")
+catalog_exists = len(spark.sql(f"SHOW CATALOGS LIKE '{catalog_name}'").collect()) > 0
+if catalog_exists:
+    spark.sql(f"DROP SCHEMA IF EXISTS {catalog_name}.{schema_name} CASCADE")
+    print(f"✅ Schema '{catalog_name}.{schema_name}' removido (se existia).")
+else:
+    print(f"ℹ️ Catalog '{catalog_name}' não existe ainda, nada a limpar.")
 
 # COMMAND ----------
 
@@ -194,50 +203,25 @@ display(df_train.describe())
 # MAGIC ## 3. Persistência no Unity Catalog (Delta Tables)
 # MAGIC
 # MAGIC Convertemos os DataFrames Pandas para Spark e salvamos como Delta Tables no Unity Catalog.
+# MAGIC Salvamos em todos os catalogs de destino (dev, staging, prod, test).
 
 # COMMAND ----------
 
-# DBTITLE 1, Salvar tabela de treino
-train_table = f"{catalog_name}.{schema_name}.taxi_fares_train"
+# DBTITLE 1, Salvar tabelas em todos os catalogs de destino
+sdf_train   = spark.createDataFrame(df_train)
+sdf_val     = spark.createDataFrame(df_val)
+sdf_scoring = spark.createDataFrame(df_scoring.drop(columns=["fare_amount"]))
 
-spark.createDataFrame(df_train) \
-    .write.format("delta") \
-    .mode("overwrite") \
-    .option("overwriteSchema", "true") \
-    .saveAsTable(train_table)
+for cat in ["dev", "staging", "prod", "test"]:
+    train_table   = f"{cat}.{schema_name}.taxi_fares_train"
+    val_table     = f"{cat}.{schema_name}.taxi_fares_val"
+    scoring_table = f"{cat}.{schema_name}.taxi_scoring"
 
-print(f"✅ Tabela de treino salva: {train_table}")
-spark.sql(f"SELECT COUNT(*) AS total FROM {train_table}").show()
+    sdf_train.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(train_table)
+    sdf_val.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(val_table)
+    sdf_scoring.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(scoring_table)
 
-# COMMAND ----------
-
-# DBTITLE 1, Salvar tabela de validação
-val_table = f"{catalog_name}.{schema_name}.taxi_fares_val"
-
-spark.createDataFrame(df_val) \
-    .write.format("delta") \
-    .mode("overwrite") \
-    .option("overwriteSchema", "true") \
-    .saveAsTable(val_table)
-
-print(f"✅ Tabela de validação salva: {val_table}")
-spark.sql(f"SELECT COUNT(*) AS total FROM {val_table}").show()
-
-# COMMAND ----------
-
-# DBTITLE 1, Salvar tabela de scoring (sem a coluna target)
-# Na inferência em batch, normalmente não temos o target disponível.
-# Removemos 'fare_amount' para simular dados reais de produção.
-scoring_table = f"{catalog_name}.{schema_name}.taxi_scoring"
-
-spark.createDataFrame(df_scoring.drop(columns=["fare_amount"])) \
-    .write.format("delta") \
-    .mode("overwrite") \
-    .option("overwriteSchema", "true") \
-    .saveAsTable(scoring_table)
-
-print(f"✅ Tabela de scoring salva: {scoring_table}")
-spark.sql(f"SELECT COUNT(*) AS total FROM {scoring_table}").show()
+    print(f"✅ Tabelas salvas em '{cat}.{schema_name}': taxi_fares_train, taxi_fares_val, taxi_scoring")
 
 # COMMAND ----------
 
@@ -252,21 +236,19 @@ spark.sql(f"SELECT COUNT(*) AS total FROM {scoring_table}").show()
 print(f"\n{'='*60}")
 print(f"TABELAS CRIADAS NO UNITY CATALOG")
 print(f"{'='*60}")
-tables_created = spark.sql(f"SHOW TABLES IN {catalog_name}.{schema_name}").toPandas()
-display(tables_created)
+for cat in ["dev", "staging", "prod", "test"]:
+    tables_created = spark.sql(f"SHOW TABLES IN {cat}.{schema_name}").toPandas()
+    print(f"\n--- {cat}.{schema_name} ---")
+    display(tables_created)
 
 print(f"\n✅ Setup concluído com sucesso!")
 print(f"\nPróximo passo: execute o notebook EDA.py para análise exploratória.")
-print(f"\nCaminhos das tabelas:")
-print(f"  Treino    : {train_table}")
-print(f"  Validação : {val_table}")
-print(f"  Scoring   : {scoring_table}")
 
 # COMMAND ----------
 
-# DBTITLE 1, Preview das tabelas
-print("=== Amostra: Treino ===")
-display(spark.table(train_table).limit(5))
+# DBTITLE 1, Preview das tabelas (dev)
+print("=== Amostra: Treino (dev) ===")
+display(spark.table(f"dev.{schema_name}.taxi_fares_train").limit(5))
 
-print("=== Amostra: Scoring (sem target) ===")
-display(spark.table(scoring_table).limit(5))
+print("=== Amostra: Scoring (dev, sem target) ===")
+display(spark.table(f"dev.{schema_name}.taxi_scoring").limit(5))

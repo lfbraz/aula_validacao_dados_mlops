@@ -10,7 +10,7 @@ resources:
       environments:
         - environment_key: default
           spec:
-            client: "1"
+            client: "5"
       tasks:
         - task_key: batch_inference_job
           environment_key: default
