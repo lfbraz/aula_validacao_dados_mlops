@@ -23,37 +23,32 @@
 
 # COMMAND ----------
 
+import os
+spark.range(1).collect()
+notebook_path = '/Workspace/' + os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
+
+# COMMAND ----------
+
+# MAGIC %pip install -r $notebook_path/../../../requirements.txt
+
+# COMMAND ----------
+
+import os, sys
+notebook_path = '/Workspace/' + os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
+batch_inference_dir = os.path.dirname(notebook_path)  # deployment/batch_inference/
+if batch_inference_dir not in sys.path:
+    sys.path.insert(0, batch_inference_dir)
+
+# COMMAND ----------
+
 dbutils.widgets.dropdown("env", "dev", ["dev", "staging", "prod"], "Environment Name")
-dbutils.widgets.text("input_table_name",  "", label="Tabela de entrada (scoring)")
-dbutils.widgets.text("output_table_name", "", label="Tabela de saída (previsões)")
+dbutils.widgets.text("input_table_name",  "dev.validacao_dados_aula_8.taxi_scoring",  label="Tabela de entrada (scoring)")
+dbutils.widgets.text("output_table_name", "dev.validacao_dados_aula_8.predictions",   label="Tabela de saída (previsões)")
 dbutils.widgets.text(
     "model_name",
     "dev.validacao_dados_aula_8.validacao_dados_aula_8-model",
     label="Nome completo do modelo (three-level UC name)",
 )
-
-# COMMAND ----------
-
-import os
-notebook_path = '/Workspace/' + os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
-%cd $notebook_path
-
-# COMMAND ----------
-
-# MAGIC %pip install -r ../../../requirements.txt
-
-# COMMAND ----------
-
-dbutils.library.restartPython()
-
-# COMMAND ----------
-
-import sys
-import os
-notebook_path = '/Workspace/' + os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
-%cd $notebook_path
-%cd ..
-sys.path.append("../..")
 
 # COMMAND ----------
 
