@@ -10,6 +10,7 @@ resources:
       environments:
         - environment_key: default
           spec:
+            client: "1"
             dependencies:
               - mlflow==2.11.3
               - lightgbm

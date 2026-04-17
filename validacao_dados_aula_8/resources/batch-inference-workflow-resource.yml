@@ -9,7 +9,6 @@ resources:
       name: ${bundle.target}-validacao_dados_aula_8-batch-inference-job
       environments:
         - environment_key: default
-          spec:
       tasks:
         - task_key: batch_inference_job
           environment_key: default
