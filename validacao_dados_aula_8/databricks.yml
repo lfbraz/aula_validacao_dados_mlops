@@ -6,8 +6,6 @@ bundle:
   name: validacao_dados_aula_8
 
 variables:
-  workspace_host:
-    description: Databricks workspace host URL. Set via BUNDLE_VAR_workspace_host environment variable.
   experiment_name:
     description: Experiment name for the model training.
     default: /Users/${workspace.current_user.userName}/validacao_dados_aula_8-experiment
@@ -16,7 +14,7 @@ variables:
     default: validacao_dados_aula_8-model
   catalog_name:
     description: The catalog name to save the trained model
-    
+
 include:
   # Resources folder contains ML artifact resources for the ML project that defines model and experiment
   # And workflows resources for the ML project including model training -> validation -> deployment,
@@ -28,30 +26,22 @@ include:
   # - ./resources/monitoring-resource.yml
 
 # Deployment Target specific values for workspace
+# workspace.host does not support variable interpolation — set DATABRICKS_HOST env var instead.
 targets:
-  dev:  # UC Catalog Name 
+  dev:
     mode: development
     default: true
     variables:
       catalog_name: dev
-    workspace:
-      # TODO: add dev workspace URL
-      host: ${var.workspace_host}
 
   staging:
     variables:
       catalog_name: staging
-    workspace:
-      host: ${var.workspace_host}
 
   prod:
     variables:
       catalog_name: prod
-    workspace:
-      host: ${var.workspace_host}
 
   test:
     variables:
       catalog_name: test
-    workspace:
-      host: ${var.workspace_host}

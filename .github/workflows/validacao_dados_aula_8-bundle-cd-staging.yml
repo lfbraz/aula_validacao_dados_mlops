@@ -16,7 +16,7 @@ defaults:
 
 env:
   DATABRICKS_TOKEN: ${{ secrets.STAGING_WORKSPACE_TOKEN }}
-  BUNDLE_VAR_workspace_host: ${{ secrets.BUNDLE_VAR_WORKSPACE_HOST }}
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
 
 jobs:
   staging:
