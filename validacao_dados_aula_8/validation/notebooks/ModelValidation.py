@@ -118,7 +118,7 @@ mlflow.set_experiment(experiment_name)
 # DBTITLE 1, Recuperar informações do modelo (via task values ou widgets)
 # Durante execução no workflow, o modelo é passado como task value da task "Train"
 # Durante execução manual, usamos os widgets
-# Test de Pipeline 1-b
+###  Test de Pipeline 1-b
 model_uri     = dbutils.jobs.taskValues.get("Train", "model_uri",     debugValue="")
 model_name    = dbutils.jobs.taskValues.get("Train", "model_name",    debugValue="")
 model_version = dbutils.jobs.taskValues.get("Train", "model_version", debugValue="")
