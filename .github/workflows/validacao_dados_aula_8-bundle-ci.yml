@@ -16,6 +16,7 @@ defaults:
 env:
   STAGING_WORKSPACE_TOKEN: ${{ secrets.STAGING_WORKSPACE_TOKEN }}
   PROD_WORKSPACE_TOKEN: ${{ secrets.PROD_WORKSPACE_TOKEN }}
+  BUNDLE_VAR_workspace_host: ${{ secrets.BUNDLE_VAR_WORKSPACE_HOST }}
 
 jobs:
   staging:
