@@ -98,6 +98,27 @@ else:
 # COMMAND ----------
 
 # DBTITLE 1, Importar dependências
+# Workaround for typing_extensions Sentinel missing in version 4.15.0
+# Pydantic 2.13.2 requires Sentinel, but environment only has typing_extensions 4.15.0
+import sys
+import typing_extensions
+
+# Define Sentinel before any pydantic imports
+if not hasattr(typing_extensions, 'Sentinel'):
+    class _Sentinel:
+        def __init__(self, name):
+            self._name = name
+        def __repr__(self):
+            return f'<{self._name}>'
+    # Inject into typing_extensions module before pydantic loads
+    typing_extensions.Sentinel = _Sentinel
+    sys.modules['typing_extensions'].Sentinel = _Sentinel
+    
+    # If pydantic is already loaded, we need to restart Python
+    if any('pydantic' in name for name in sys.modules.keys()):
+        print("⚠️  Pydantic already loaded. Restarting Python to apply Sentinel patch...")
+        dbutils.library.restartPython()
+
 import importlib
 import mlflow
 import os
