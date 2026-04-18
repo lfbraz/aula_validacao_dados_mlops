@@ -98,6 +98,48 @@ else:
 # COMMAND ----------
 
 # DBTITLE 1, Importar dependências
+# Workaround for typing_extensions compatibility issues
+# Some environments (especially pipeline execution) have older typing_extensions versions
+# missing Sentinel (4.16.0+) and NoExtraItems (4.12.0+) required by pydantic 2.x
+import sys
+import typing_extensions
+
+# Log environment info for debugging pipeline issues
+print(f"🔧 Python {sys.version.split()[0]}, typing_extensions {getattr(typing_extensions, '__version__', 'unknown')}")
+
+# Track what patches we apply
+patches_applied = []
+
+# Patch 1: Sentinel (required by pydantic 2.13+ for MISSING singleton)
+if not hasattr(typing_extensions, 'Sentinel'):
+    class _Sentinel:
+        """Compatibility shim for typing_extensions.Sentinel (added in 4.16.0)"""
+        def __init__(self, name):
+            self._name = name
+        def __repr__(self):
+            return f'<{self._name}>'
+    typing_extensions.Sentinel = _Sentinel
+    sys.modules['typing_extensions'].Sentinel = _Sentinel
+    patches_applied.append('Sentinel')
+
+# Patch 2: NoExtraItems (required by pydantic's TypedDict validation)
+if not hasattr(typing_extensions, 'NoExtraItems'):
+    class _NoExtraItems:
+        """Compatibility shim for typing_extensions.NoExtraItems (added in 4.12.0)"""
+        def __repr__(self):
+            return 'typing_extensions.NoExtraItems'
+    typing_extensions.NoExtraItems = _NoExtraItems()
+    sys.modules['typing_extensions'].NoExtraItems = typing_extensions.NoExtraItems
+    patches_applied.append('NoExtraItems')
+
+if patches_applied:
+    print(f"   Applied compatibility patches: {', '.join(patches_applied)}")
+
+# If pydantic is already loaded in the session, we need to restart to apply patches
+if any('pydantic' in name for name in sys.modules.keys()):
+    print("⚠️  Pydantic already loaded. Restarting Python to apply patches...")
+    dbutils.library.restartPython()
+
 import importlib
 import mlflow
 import os
@@ -197,6 +239,51 @@ print(f"   Thresholds            : {list(validation_thresholds.keys())}")
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Validação de Schema com Pandera
+# MAGIC
+# MAGIC Antes de avaliar as métricas do modelo, verificamos a integridade dos **dados de entrada**
+# MAGIC com o framework [Pandera](https://pandera.readthedocs.io/).
+# MAGIC
+# MAGIC Esta etapa é complementar ao `mlflow.evaluate()`:
+# MAGIC | Ferramenta        | O que valida                                      |
+# MAGIC |-------------------|---------------------------------------------------|
+# MAGIC | **Pandera**       | Schema, tipos, ranges e nulos dos dados de entrada |
+# MAGIC | **mlflow.evaluate** | Métricas de qualidade do modelo (RMSE, MAE, R²…) |
+# MAGIC
+# MAGIC Integrar ambos no pipeline de CI/CD garante que falhas de dados sejam detectadas
+# MAGIC separadamente de falhas de performance do modelo.
+
+# COMMAND ----------
+
+# DBTITLE 1, Validação de Schema com Pandera
+import pandera as pa
+
+pandera_passed        = True
+pandera_failures      = None
+pandera_record_count  = 0
+
+_pandera_schema_fn = getattr(validation_module, "pandera_schema", None)
+
+if _pandera_schema_fn is None:
+    print("ℹ️  pandera_schema não definida em validation.py — etapa ignorada.")
+else:
+    print("🔍 Validando schema do dataset de entrada com Pandera...")
+    _schema    = _pandera_schema_fn()
+    _input_pdf = data.toPandas()
+    pandera_record_count = len(_input_pdf)
+
+    try:
+        _schema.validate(_input_pdf, lazy=True)
+        print(f"✅ Pandera: {pandera_record_count:,} registros validados com sucesso.")
+    except pa.errors.SchemaErrors as _pandera_err:
+        pandera_passed   = False
+        pandera_failures = _pandera_err.failure_cases
+        print(f"❌ Pandera: {len(pandera_failures)} violações de schema detectadas.")
+        display(pandera_failures)
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Executar Avaliação com mlflow.evaluate()
 # MAGIC
 # MAGIC O `mlflow.evaluate()` é a função central da validação. Ele:
@@ -260,6 +347,24 @@ with mlflow.start_run(
     mlflow.log_artifact(thresholds_file)
 
     try:
+        # --- Logar resultado da validação Pandera como artefato MLflow ---
+        pandera_file = os.path.join(tmp_dir, "pandera_validation.txt")
+        with open(pandera_file, "w") as f:
+            if pandera_passed:
+                f.write("PANDERA SCHEMA VALIDATION: PASSED\n")
+                f.write(f"Registros validados: {pandera_record_count}\n")
+            else:
+                f.write("PANDERA SCHEMA VALIDATION: FAILED\n")
+                if pandera_failures is not None:
+                    f.write(pandera_failures.to_string())
+        mlflow.log_artifact(pandera_file)
+
+        if not pandera_passed:
+            raise Exception(
+                f"Pandera schema validation falhou: {len(pandera_failures)} violações detectadas.\n"
+                f"Corrija os dados de entrada antes de prosseguir com a avaliação do modelo."
+            )
+
         print("🚀 Iniciando mlflow.evaluate()...")
         eval_result = mlflow.evaluate(
             model=model_uri,
