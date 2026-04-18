@@ -98,26 +98,47 @@ else:
 # COMMAND ----------
 
 # DBTITLE 1, Importar dependências
-# Workaround for typing_extensions Sentinel missing in version 4.15.0
-# Pydantic 2.13.2 requires Sentinel, but environment only has typing_extensions 4.15.0
+# Workaround for typing_extensions compatibility issues
+# Some environments (especially pipeline execution) have older typing_extensions versions
+# missing Sentinel (4.16.0+) and NoExtraItems (4.12.0+) required by pydantic 2.x
 import sys
 import typing_extensions
 
-# Define Sentinel before any pydantic imports
+# Log environment info for debugging pipeline issues
+print(f"🔧 Python {sys.version.split()[0]}, typing_extensions {getattr(typing_extensions, '__version__', 'unknown')}")
+
+# Track what patches we apply
+patches_applied = []
+
+# Patch 1: Sentinel (required by pydantic 2.13+ for MISSING singleton)
 if not hasattr(typing_extensions, 'Sentinel'):
     class _Sentinel:
+        """Compatibility shim for typing_extensions.Sentinel (added in 4.16.0)"""
         def __init__(self, name):
             self._name = name
         def __repr__(self):
             return f'<{self._name}>'
-    # Inject into typing_extensions module before pydantic loads
     typing_extensions.Sentinel = _Sentinel
     sys.modules['typing_extensions'].Sentinel = _Sentinel
-    
-    # If pydantic is already loaded, we need to restart Python
-    if any('pydantic' in name for name in sys.modules.keys()):
-        print("⚠️  Pydantic already loaded. Restarting Python to apply Sentinel patch...")
-        dbutils.library.restartPython()
+    patches_applied.append('Sentinel')
+
+# Patch 2: NoExtraItems (required by pydantic's TypedDict validation)
+if not hasattr(typing_extensions, 'NoExtraItems'):
+    class _NoExtraItems:
+        """Compatibility shim for typing_extensions.NoExtraItems (added in 4.12.0)"""
+        def __repr__(self):
+            return 'typing_extensions.NoExtraItems'
+    typing_extensions.NoExtraItems = _NoExtraItems()
+    sys.modules['typing_extensions'].NoExtraItems = typing_extensions.NoExtraItems
+    patches_applied.append('NoExtraItems')
+
+if patches_applied:
+    print(f"   Applied compatibility patches: {', '.join(patches_applied)}")
+
+# If pydantic is already loaded in the session, we need to restart to apply patches
+if any('pydantic' in name for name in sys.modules.keys()):
+    print("⚠️  Pydantic already loaded. Restarting Python to apply patches...")
+    dbutils.library.restartPython()
 
 import importlib
 import mlflow
