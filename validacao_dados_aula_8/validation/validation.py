@@ -7,6 +7,7 @@ Edite as funções abaixo para definir as regras de qualidade do modelo.
 Documentação:
   - mlflow.evaluate: https://mlflow.org/docs/latest/python_api/mlflow.html#mlflow.evaluate
   - Model Validation: https://mlflow.org/docs/latest/models.html#model-validation
+  - Pandera: https://pandera.readthedocs.io/
 """
 
 import numpy as np
@@ -127,3 +128,45 @@ def evaluator_config():
         # Colunas que não são features (serão ignoradas pelo evaluator)
         # O MLflow já lida com isso via 'targets', mas podemos ser explícitos
     }
+
+
+# ---------------------------------------------------------------------------
+# 4. Schema de entrada — Pandera
+# ---------------------------------------------------------------------------
+
+def pandera_schema():
+    """
+    Define o schema Pandera para validação do dataset de entrada.
+
+    Integração complementar ao mlflow.evaluate(): enquanto o MLflow valida
+    a qualidade das métricas do modelo, o Pandera valida a integridade e
+    conformidade dos dados de entrada antes da avaliação.
+
+    Tipos, ranges e ausência de nulos são verificados para todas as colunas
+    originais do dataset de corridas de táxi.
+
+    Documentação: https://pandera.readthedocs.io/
+    """
+    import pandera as pa
+
+    return pa.DataFrameSchema(
+        columns={
+            "trip_distance":  pa.Column(float, pa.Check.between(0.0, 50.0),  nullable=False,
+                                        description="Distância da corrida em km (0.5–30 km)"),
+            "num_passengers": pa.Column(int,   pa.Check.between(1, 6),       nullable=False,
+                                        description="Número de passageiros (1–6)"),
+            "hour_of_day":    pa.Column(int,   pa.Check.between(0, 23),      nullable=False,
+                                        description="Hora de início da corrida (0–23)"),
+            "day_of_week":    pa.Column(int,   pa.Check.between(0, 6),       nullable=False,
+                                        description="Dia da semana (0=seg, 6=dom)"),
+            "weather_score":  pa.Column(float, pa.Check.between(0.0, 10.0), nullable=False,
+                                        description="Índice climático (0=péssimo, 10=ótimo)"),
+            "pickup_zone":    pa.Column(int,   pa.Check.between(1, 5),       nullable=False,
+                                        description="Zona de origem (1–5)"),
+            "dropoff_zone":   pa.Column(int,   pa.Check.between(1, 5),       nullable=False,
+                                        description="Zona de destino (1–5)"),
+            "fare_amount":    pa.Column(float, pa.Check.greater_than(0.0),   nullable=False,
+                                        description="Valor da corrida em USD (target)"),
+        },
+        coerce=True,
+    )
