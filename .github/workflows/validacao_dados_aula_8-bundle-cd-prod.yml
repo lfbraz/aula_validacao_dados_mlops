@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: databricks/setup-cli@v0.236.0
+      - uses: databricks/setup-cli@v1.15.0
       - name: Validate Bundle For Prod
         id: validate
         run: |
