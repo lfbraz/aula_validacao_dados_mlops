@@ -157,6 +157,30 @@ mlflow.set_experiment(experiment_name)
 
 # COMMAND ----------
 
+# DBTITLE 1, Workaround: MLflow em Serverless
+# O Serverless bloqueia o método Java CommandContext.extraContext(), que o MLflow
+# usa como fallback para ler metadados do notebook. Isso gera o aviso
+# "Py4JSecurityException: ... extraContext() is not whitelisted" ao criar runs.
+# O aviso é inofensivo; aqui fazemos o fallback retornar None em vez de falhar.
+import functools
+from mlflow.utils import databricks_utils as _dbx_utils
+
+_orig_get_extra_context = getattr(_dbx_utils, "_get_extra_context", None)
+
+if _orig_get_extra_context is not None and not getattr(_orig_get_extra_context, "_serverless_safe", False):
+
+    @functools.wraps(_orig_get_extra_context)
+    def _safe_get_extra_context(context_key):
+        try:
+            return _orig_get_extra_context(context_key)
+        except Exception:
+            return None  # método bloqueado pela whitelist → metadado indisponível
+
+    _safe_get_extra_context._serverless_safe = True
+    _dbx_utils._get_extra_context = _safe_get_extra_context
+
+# COMMAND ----------
+
 # DBTITLE 1, Recuperar informações do modelo (via task values ou widgets)
 # Durante execução no workflow, o modelo é passado como task value da task "Train"
 # Durante execução manual, usamos os widgets
