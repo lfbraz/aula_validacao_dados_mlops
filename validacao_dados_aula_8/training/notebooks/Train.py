@@ -148,7 +148,6 @@ training_df = (
 )
 
 print(f"✅ Features criadas: {training_df.columns}")
-print("demo-mlops")
 display(training_df.limit(3))
 
 # COMMAND ----------
