@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 ##################################################################################
 # Notebook de Treinamento do Modelo
 #
@@ -144,6 +148,7 @@ training_df = (
 )
 
 print(f"✅ Features criadas: {training_df.columns}")
+print("demo-mlops")
 display(training_df.limit(3))
 
 # COMMAND ----------
