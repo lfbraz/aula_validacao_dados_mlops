@@ -100,6 +100,7 @@ training_df = spark.table(input_table_path)
 
 print(f"✅ Dados carregados: {training_df.count():,} registros, {len(training_df.columns)} colunas")
 print(f"\nSchema:")
+print("teste-demo-mlops")
 training_df.printSchema()
 display(training_df.limit(5))
 
